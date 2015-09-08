@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import org.zywx.wbpalmstar.base.BConstant;
 import org.zywx.wbpalmstar.engine.external.Compat;
 import org.zywx.wbpalmstar.engine.universalex.EUExWidget.SpaceClickListener;
+import org.zywx.wbpalmstar.engine.webview.ACEWebView;
 import org.zywx.wbpalmstar.widgetone.dataservice.WWidgetData;
 
 import android.content.Context;
@@ -38,7 +39,6 @@ import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
-import android.webkit.WebView;
 import android.widget.FrameLayout;
 
 import com.slidingmenu.lib.SlidingMenu;
@@ -542,7 +542,7 @@ public class EBrowserWidget extends AbsoluteLayout {
 		return mResultInfo;
 	}
 
-	public void evaluateScript(WebView inWhich, String inWindowName,
+	public void evaluateScript(ACEWebView inWhich, String inWindowName,
 			int inType, String inScript) {
 		EBrowserWindow window = mEWindowStack.get(inWindowName);
 		if (null != window) {
@@ -550,7 +550,7 @@ public class EBrowserWidget extends AbsoluteLayout {
 		}
 	}
 
-	public void evaluatePopoverScript(WebView inWhich, String inWndName,
+	public void evaluatePopoverScript(ACEWebView inWhich, String inWndName,
 			String inPopName, String inScript) {
 		EBrowserWindow window = mEWindowStack.get(inWndName);
 		if (null != window) {
@@ -558,7 +558,7 @@ public class EBrowserWidget extends AbsoluteLayout {
 		}
 	}
 	
-	public void evaluateMultiPopoverScript(WebView inWhich, String inWndName,
+	public void evaluateMultiPopoverScript(ACEWebView inWhich, String inWndName,
 			String inMultiPopName, String inPopName, String inScript) {
 		EBrowserWindow window = mEWindowStack.get(inWndName);
 		if (null != window) {

@@ -35,12 +35,13 @@ import android.view.ViewParent;
 import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
 import android.view.inputmethod.InputMethodManager;
-import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.zywx.wbpalmstar.acedes.ACEDes;
+import org.zywx.wbpalmstar.base.BDebug;
 import org.zywx.wbpalmstar.base.BUtility;
 import org.zywx.wbpalmstar.engine.EBrowserHistory.EHistoryEntry;
 import org.zywx.wbpalmstar.engine.external.Compat;
@@ -48,6 +49,7 @@ import org.zywx.wbpalmstar.engine.universalex.EUExCallback;
 import org.zywx.wbpalmstar.engine.universalex.EUExScript;
 import org.zywx.wbpalmstar.engine.universalex.EUExWidget.SpaceClickListener;
 import org.zywx.wbpalmstar.engine.universalex.EUExWindow;
+import org.zywx.wbpalmstar.engine.webview.ACEWebView;
 import org.zywx.wbpalmstar.widgetone.dataservice.WWidgetData;
 
 import java.util.*;
@@ -141,6 +143,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 					EBrwViewEntry.VIEW_TYPE_MAIN, this);
 			mMainView.setVisibility(VISIBLE);
 			mMainView.setName("main");
+			mMainView.setLayoutParams(new LayoutParams(1000, 1000));
 			EBounceView bounceView = new EBounceView(mContext);
 			EUtil.viewBaseSetting(bounceView);
 			bounceView.setId(VIEW_MID);
@@ -242,7 +245,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 
 	}
 
-	public void createSibling(WebView view, EBrwViewEntry slbEntry) {
+	public void createSibling(ACEWebView view, EBrwViewEntry slbEntry) {
 		Message msg = mWindLoop.obtainMessage();
 		msg.obj = slbEntry;
 		msg.what = F_WHANDLER_SLIBING_CREATE;
@@ -304,7 +307,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 		mWindLoop.sendMessage(msg);
 	}
 
-	public void evaluatePopoverScript(WebView inWhich, String inWndName,
+	public void evaluatePopoverScript(ACEWebView inWhich, String inWndName,
 			String inPopName, String inScript) {
 		if (null == inWndName || 0 == inWndName.length()) {
 			EBrowserView old = mPopTable.get(inPopName);
@@ -345,7 +348,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 		vParent.setLayoutParams(lParam);
 	}
 
-	public void evaluateMultiPopoverScript(WebView inWhich, String inWndName,
+	public void evaluateMultiPopoverScript(ACEWebView inWhich, String inWndName,
 			String inMultiPopName, String inPopName, String inScript) {
 		if (null == inWndName || 0 == inWndName.length()) {
 			ArrayList<EBrowserView> list = mMultiPopTable.get(inMultiPopName);
@@ -769,7 +772,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 		}
 	}
 
-	public void evaluateScript(WebView inWhich, String inWindowName,
+	public void evaluateScript(ACEWebView inWhich, String inWindowName,
 			int inType, String inScript) {
 		if (null == inWindowName || 0 == inWindowName.length()
 				|| inWindowName.equals(mName)) {
@@ -1130,7 +1133,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 		return mBottomView;
 	}
 
-	protected WWidgetData getWidget() {
+	public WWidgetData getWidget() {
 
 		return mBroWidget.getWidget();
 	}
@@ -1300,7 +1303,7 @@ public class EBrowserWindow extends FrameLayout implements AnimationListener {
 		mMainView.loadUrl(EUExScript.F_UEX_SCRIPT_BOTTOM_FINISH);
 	}
 
-	protected void selfFinish(WebView target) {
+	protected void selfFinish(ACEWebView target) {
 		if (null != target) {
 			target.loadUrl(EUExScript.F_UEX_SCRIPT_SELF_FINISH);
 		} else {

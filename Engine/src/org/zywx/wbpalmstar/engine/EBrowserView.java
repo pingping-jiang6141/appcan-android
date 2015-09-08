@@ -30,6 +30,7 @@ import org.zywx.wbpalmstar.acedes.EXWebViewClient;
 import org.zywx.wbpalmstar.engine.universalex.EUExCallback;
 import org.zywx.wbpalmstar.engine.universalex.EUExManager;
 import org.zywx.wbpalmstar.engine.universalex.EUExWindow;
+import org.zywx.wbpalmstar.engine.webview.ACEWebView;
 import org.zywx.wbpalmstar.widgetone.dataservice.WWidgetData;
 
 import android.annotation.SuppressLint;
@@ -38,7 +39,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.support.v4.view.ViewPager;
@@ -50,11 +50,9 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.DownloadListener;
-import android.webkit.WebView;
 import android.widget.FrameLayout;
 
-public class EBrowserView extends WebView implements View.OnLongClickListener,
-		DownloadListener {
+public class EBrowserView extends ACEWebView{
 
 	public static final String CONTENT_MIMETYPE_HTML = "text/html";
 	public static final String CONTENT_DEFAULT_CODE = "utf-8";
@@ -70,7 +68,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 	private String mRelativeUrl;
 	private Context mContext;
 	private EUExManager mUExMgr;
-	private EBrowserBaseSetting mBaSetting;
+
 	private EBrowserWindow mBroWind;
 	private boolean mShouldOpenInSystem;
 	private boolean mOpaque;
@@ -80,15 +78,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 	private int mDateType;
 	private boolean mDestroyed;
 	private EBrwViewAnim mViewAnim;
-	private EXWebViewClient mEXWebViewClient;
 	private Method mDismissZoomControl;
-
-	// use for debug
-	private Method mDumpDisplayTree;
-	private Method mDumpDomTree;
-	private Method mDumpRenderTree;
-	private Method mDrawPage;
-
 	private int mMyCountId;
 
 	private int mScrollDistance = 10;
@@ -96,15 +86,16 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 	private boolean mIsNeedScroll = false;
 	private boolean isMultilPopoverFlippingEnbaled = false;
 
-	protected EBrowserView(Context context, int inType, EBrowserWindow inParent) {
+	public EBrowserView(Context context, int inType, EBrowserWindow inParent) {
 		super(context);
+		BDebug.i("EBrowserView","构造函数");
 		mMyCountId = EBrowser.assignCountID();
 		mBroWind = inParent;
 		mContext = context;
 		mType = inType;
 		initPrivateVoid();
 //		setOnLongClickListener(this);
-		setDownloadListener(this);
+		setDownloadListener();
 	}
 
 	public void setScrollCallBackContex(EUExWindow callback) {
@@ -112,52 +103,37 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 	}
 
 	protected void init() {
+		super.init(mWebApp);
 		setInitialScale(100);
 		setVerticalScrollbarOverlay(true);
 		setHorizontalScrollbarOverlay(true);
 		setLayoutAnimation(null);
 		setAnimation(null);
 		setNetworkAvailable(true);
-		if (Build.VERSION.SDK_INT <= 7) {
-			if (mBaSetting == null) {
-				mBaSetting = new EBrowserSetting(this);
-				mBaSetting.initBaseSetting(mWebApp);
-				setWebViewClient(mEXWebViewClient = new CBrowserWindow());
-				setWebChromeClient(new CBrowserMainFrame(mContext));
-			}
-			
-		} else {
-			
-			if (mBaSetting == null) {
-				mBaSetting = new EBrowserSetting7(this);
-				mBaSetting.initBaseSetting(mWebApp);
-				setWebViewClient(mEXWebViewClient = new CBrowserWindow7());
-				setWebChromeClient(new CBrowserMainFrame7(mContext));
-			}
-			
-		}
+		BDebug.i("init test");	
 		mUExMgr = new EUExManager(mContext);
 		mUExMgr.addJavascriptInterface(this);
 	}
 
-    @Override
-    protected void onAttachedToWindow() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB && !isHardwareAccelerated()) {
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-            BDebug.i("setLayerType","LAYER_TYPE_SOFTWARE");
-        }
-        super.onAttachedToWindow();
-    }
 
-    @Override
-    public boolean isHardwareAccelerated() {
-        //confirm view is attached to a window
-        boolean isHardwareAccelerated=super.isHardwareAccelerated();
-        BDebug.i("isHardwareAccelerated",isHardwareAccelerated);
-        return isHardwareAccelerated;
-    }
+	@Override
+	protected void onAttachedToWindow() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB && !isHardwareAccelerated()) {
+			setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+			BDebug.i("setLayerType","LAYER_TYPE_SOFTWARE");
+		}
+		super.onAttachedToWindow();
+	}
 
-    @Override
+	@Override
+	public boolean isHardwareAccelerated() {
+		//confirm view is attached to a window
+		boolean isHardwareAccelerated=super.isHardwareAccelerated();
+		BDebug.i("isHardwareAccelerated",isHardwareAccelerated);
+		return isHardwareAccelerated;
+	}
+
+	@Override
 	public void loadUrl(String url) {
 		if (mDestroyed) {
 			return;
@@ -222,12 +198,12 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		if (mDestroyed) {
 			return;
 		}
-		mBaSetting.setDefaultFontSize(size);
+		super.setDefaultFontSize(size);
 	}
 
 	public void setSupportZoom() {
 		mSupportZoom = true;
-		mBaSetting.setSupportZoom();
+		super.setSupportZoom();
 	}
 
 	public boolean supportZoom() {
@@ -235,59 +211,8 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		return mSupportZoom;
 	}
 
-	@SuppressLint("NewApi")
-	private void initPrivateVoid() {
-		Class[] nullParm = {};
-		try {
-			mDismissZoomControl = WebView.class.getDeclaredMethod(
-					"dismissZoomControl", nullParm);
-			mDismissZoomControl.setAccessible(true);
-		} catch (Exception e) {
-			;
-		}
-
-		try {
-			mDumpDisplayTree = WebView.class.getDeclaredMethod(
-					"dumpDisplayTree", nullParm);
-			mDumpDisplayTree.setAccessible(true);
-		} catch (Exception e) {
-			;
-		}
-		Class[] booleanParam = { boolean.class };
-		try {
-			mDumpDomTree = WebView.class.getDeclaredMethod("dumpDomTree",
-					booleanParam);
-			mDumpDomTree.setAccessible(true);
-		} catch (Exception e) {
-			;
-		}
-		try {
-			mDumpRenderTree = WebView.class.getDeclaredMethod("dumpRenderTree",
-					booleanParam);
-			mDumpRenderTree.setAccessible(true);
-		} catch (Exception e) {
-			;
-		}
-		try {
-			Class[] canvasParam = { Canvas.class };
-			mDrawPage = WebView.class
-					.getDeclaredMethod("drawPage", canvasParam);
-			mDrawPage.setAccessible(true);
-		} catch (Exception e) {
-			;
-		}
-		if (Build.VERSION.SDK_INT >= 9) {
-			setOverScrollMode(2);
-			return;
-		}
-		try {
-			Class[] intParam = { int.class };
-			Method setOverScrollMode = WebView.class.getDeclaredMethod(
-					"setOverScrollMode", intParam);
-			setOverScrollMode.invoke(this, 2);
-		} catch (Exception e) {
-			;
-		}
+    public void initPrivateVoid() {
+        super.initPrivateVoid();
 	}
 
 	public void dumpPageInfo(int type) {
@@ -363,38 +288,12 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		}
 	}
 
-	@SuppressLint("NewApi")
-	private void pauseCore() {
-		if (Build.VERSION.SDK_INT >= 11) {
-			super.onPause();
-		} else {
-			try {
-				Class[] nullParm = {};
-				Method pause = WebView.class.getDeclaredMethod("onPause",
-						nullParm);
-				pause.setAccessible(true);
-				pause.invoke(this);
-			} catch (Exception e) {
-				;
-			}
-		}
+    public void pauseCore() {
+		super.pauseCore();
 	}
 
-	@SuppressLint("NewApi")
-	private void resumeCore() {
-		if (Build.VERSION.SDK_INT >= 11) {
-			super.onResume();
-		} else {
-			try {
-				Class[] nullParm = {};
-				Method resume = WebView.class.getDeclaredMethod("onResume",
-						nullParm);
-				resume.setAccessible(true);
-				resume.invoke(this);
-			} catch (Exception e) {
-				;
-			}
-		}
+    public void resumeCore() {
+        super.resumeCore();
 	}
 
 	public void myDumpDisplayTree() {
@@ -518,18 +417,6 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		 **/
 		// int childCount1 = getChildCount();
 		// Log.d("ldx", "childCount1: " + childCount1);
-
-		Log.d("ldx", "hasFocus: " + hasFocus());
-		Log.d("ldx", "isFocused: " + isFocused());
-
-		Log.d("ldx", "-------------- view out: " + mName);
-
-	}
-
-	@Override
-	public boolean onLongClick(View v) {
-
-		return true;
 	}
 
 	@SuppressLint("NewApi")
@@ -554,7 +441,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		}
 	}
 
-	protected void onPageStarted(EBrowserView view, String url) {
+	public void onPageStarted(EBrowserView view, String url) {
 		if (mDestroyed) {
 			return;
 		}
@@ -569,7 +456,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		mBroWind.onPageStarted(view, url);
 	}
 
-	protected void onPageFinished(EBrowserView view, String url) {
+	public void onPageFinished(EBrowserView view, String url) {
 		if (mDestroyed) {
 			return;
 		}
@@ -653,8 +540,8 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		}
 	}
 
-	protected void updateObfuscationHistroy(String inUrl, int step,
-			boolean isObfuscation) {
+	public void updateObfuscationHistroy(String inUrl, int step,
+										 boolean isObfuscation) {
 		if (mDestroyed) {
 			return;
 		}
@@ -741,8 +628,8 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 						false);
 			} else {
 				needToEncrypt(this, url, EBrowserHistory.UPDATE_STEP_INIT); // may
-																			// be
-																			// crash
+				// be
+				// crash
 			}
 		} else {
 			if (Build.VERSION.SDK_INT >= 11) {
@@ -776,8 +663,8 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		loadData(inData, CONTENT_MIMETYPE_HTML, CONTENT_DEFAULT_CODE);
 	}
 
-	protected void receivedError(int errorCode, String description,
-			String failingUrl) {
+	public void receivedError(int errorCode, String description,
+							  String failingUrl) {
 		if (mDestroyed) {
 			return;
 		}
@@ -806,7 +693,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
         }
     }
 
-	protected void needToEncrypt(WebView view, String url, int inFlag) {
+	protected void needToEncrypt(ACEWebView view, String url, int inFlag) {
 		if (mDestroyed) {
 			return;
 		}
@@ -906,7 +793,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
             return "";
         }
         if (!checkType(EBrwViewEntry.VIEW_TYPE_MAIN)) {
-            return mBroWind.location();
+			return mBroWind.location();
         } else {
             String url = getUrl();
             if(TextUtils.isEmpty(url)){
@@ -971,7 +858,8 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		}
 	}
 
-    public void setBrwViewBackground(boolean flag, String bgColor, String baseUrl) {
+    @SuppressLint("NewApi")
+	public void setBrwViewBackground(boolean flag, String bgColor, String baseUrl) {
         if (flag) {
             if(bgColor.startsWith("#") || bgColor.startsWith("rgb")){
                 int color = BUtility.parseColor(bgColor);
@@ -984,8 +872,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
                 if(bitmap != null){
                     d = new BitmapDrawable(mContext.getResources(), bitmap);
                 }
-                int version = Build.VERSION.SDK_INT;
-                if(version < 16){
+                if(Build.VERSION.SDK_INT < 16){
                     setBackgroundDrawable(d);
                     setBackgroundColor(Color.argb(0, 0, 0, 0));
                 }else{
@@ -1118,7 +1005,7 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 	}
 
 	public void makeRotate(final float fd, final float px, final float py,
-			final float pz) {
+						   final float pz) {
 		final EBrowserView v = this;
 		post(new Runnable() {
 			@Override
@@ -1326,9 +1213,9 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		if (mDestroyed) {
 			return;
 		}
+		super.destroy();
 		mDestroyed = true;
 		mBroWind = null;
-		mBaSetting = null;
 		mContext = null;
 		clearView();
 		clearHistory();
@@ -1400,14 +1287,6 @@ public class EBrowserView extends WebView implements View.OnLongClickListener,
 		}
 
 		super.onScrollChanged(l, t, oldl, oldt);
-	}
-
-	@Override
-	public void onDownloadStart(String url, String userAgent,
-			String contentDisposition, String mimetype, long contentLength) {
-
-		mEXWebViewClient.onDownloadStart(mContext, url, userAgent,
-				contentDisposition, mimetype, contentLength);
 	}
 
     public void setNeedScroll(boolean b) {

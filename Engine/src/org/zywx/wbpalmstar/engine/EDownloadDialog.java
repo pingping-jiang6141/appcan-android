@@ -24,8 +24,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
 import org.apache.http.cookie.SM;
 import org.apache.http.protocol.HTTP;
+import org.zywx.wbpalmstar.engine.webview.ACEWebConst;
+
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -151,7 +154,7 @@ public class EDownloadDialog extends ProgressDialog implements Runnable{
 			mConnection.setUseCaches(false);
 			mConnection.setRequestProperty("Connection", "Keep-Alive");
 			mConnection.setRequestProperty("Charset", HTTP.UTF_8);
-			mConnection.setRequestProperty("User-Agent", EBrowserSetting.USERAGENT);
+			mConnection.setRequestProperty("User-Agent", ACEWebConst.USERAGENT);
 			mConnection.setReadTimeout(1000 * 30);
 			mConnection.setConnectTimeout(1000 * 30);
 			mConnection.setInstanceFollowRedirects(false);
