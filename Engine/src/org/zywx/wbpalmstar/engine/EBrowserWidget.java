@@ -185,6 +185,7 @@ public class EBrowserWidget extends AbsoluteLayout {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
 			newWindow.setX(0f);
 		}
+        newWindow.setSwipeEnabled(false);
 		boolean prevHidden = entry
                 .checkFlag(EBrwViewEntry.F_FLAG_NOT_HIDDEN);
 //		if (entry.mBgColor==null){
