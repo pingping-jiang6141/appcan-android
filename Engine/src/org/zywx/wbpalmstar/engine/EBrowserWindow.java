@@ -18,6 +18,7 @@
 
 package org.zywx.wbpalmstar.engine;
 
+import android.animation.Animator;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -2717,8 +2718,29 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
     public void closeWindowByAnimation(Animation anim) {
 
     	if (anim != null) {
-    		startAnimation(anim);
-        	anim.setAnimationListener(this);
+//    		startAnimation(anim);
+//        	anim.setAnimationListener(this);
+            EBrowserAnimation.startBackAnimator(this, this.getWidth(), (int) anim.getDuration(), new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    mBroWidget.putInvalid(EBrowserWindow.this);
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            });
 		} else {
 			setVisibility(GONE);
 			mBroWidget.putInvalid(this);

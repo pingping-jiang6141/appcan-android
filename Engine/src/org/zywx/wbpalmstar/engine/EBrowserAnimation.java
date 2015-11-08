@@ -18,10 +18,14 @@
 
 package org.zywx.wbpalmstar.engine;
 
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
 import android.graphics.Camera;
 import android.graphics.Matrix;
+import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
 
@@ -315,4 +319,17 @@ public class EBrowserAnimation{
 	        matrix.postTranslate(centerX, centerY);
 	    }
 	}
+
+    public static void startBackAnimator(final View target,int width,int duration, Animator.AnimatorListener listener){
+        ObjectAnimator animator = ObjectAnimator.ofFloat(target, "contentX",0, width);
+        int tmpDuration = duration;
+        if (tmpDuration < 100) {
+            tmpDuration = 100;
+        }
+        animator.setDuration(tmpDuration);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.start();
+        animator.addListener(listener);
+    }
+
 }
