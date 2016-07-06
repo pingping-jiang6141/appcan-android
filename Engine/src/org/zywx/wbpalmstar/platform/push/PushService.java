@@ -148,12 +148,14 @@ public class PushService extends Service implements PushDataCallback {
         } else {
             type = 0;
         }
+        PushReportUtility.log("start--" + type);
         try {
             // type = intent.getIntExtra("type", 0);
             // System.out.println("res ==== "+type);
             if (type == 0) {
                 if (pushGetData != null) {
                     ((MQTTService) pushGetData).onDestroy();
+                    pushGetData = null;
                 }
                 // runStatus = Status.PENDING;
                 return;
