@@ -1015,7 +1015,6 @@ public class WDataManager {
                 try {
                     CopyAssets(assetDir, dir);
                     Editor editor = m_preferences.edit();
-                    isCopyAssetsFinish = true;
                     editor.putBoolean(m_copyAssetsFinish, true);
                     editor.commit();
                 } catch (Exception e) {
@@ -1078,6 +1077,7 @@ public class WDataManager {
                 e.printStackTrace();
             }
         }
+        BDebug.i("CopyAssets", "finish");
     }
 
     public WWidgetData getSpaceWidgetData() {
