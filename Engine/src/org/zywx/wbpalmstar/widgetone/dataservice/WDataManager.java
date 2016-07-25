@@ -801,6 +801,7 @@ public class WDataManager {
                         isCopyAssetsFinish = true;
                         editor.putBoolean(m_copyAssetsFinish, true);
                         editor.commit();
+                        BDebug.i("CopyAssets", "finish");
                     } else {
                         BDebug.i("getWidgetData", "copyAssetsThread");
                         copyAssetsThread("widget", m_sboxPath + "widget/");
@@ -1017,6 +1018,7 @@ public class WDataManager {
                     Editor editor = m_preferences.edit();
                     editor.putBoolean(m_copyAssetsFinish, true);
                     editor.commit();
+                    BDebug.i("copyAssetsThread", "finish");
                 } catch (Exception e) {
                 }
             }
@@ -1077,7 +1079,6 @@ public class WDataManager {
                 e.printStackTrace();
             }
         }
-        BDebug.i("CopyAssets", "finish");
     }
 
     public WWidgetData getSpaceWidgetData() {
