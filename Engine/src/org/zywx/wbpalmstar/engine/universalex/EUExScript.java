@@ -219,6 +219,7 @@ public class EUExScript {
                 + "setSlidingWindowEnabled:function(){uexDispatcher.dispatch('uexWindow','setSlidingWindowEnabled',jo(arguments));},"
                 + "toggleSlidingWindow:function(){uexDispatcher.dispatch('uexWindow','toggleSlidingWindow',jo(arguments));},"
                 + "getSlidingWindowState:function(){uexDispatcher.dispatch('uexWindow','getSlidingWindowState',jo(arguments));},"
+                + "setLoadingImagePath:function(){uexDispatcher.dispatch('uexWindow','setLoadingImagePath',jo(arguments));},"
 
                 + "setBounce:function(){uexDispatcher.dispatch('uexWindow','setBounce',jo(arguments));},"
                 + "getBounce:function(){uexDispatcher.dispatch('uexWindow','getBounce',jo(arguments));},"
@@ -235,6 +236,7 @@ public class EUExScript {
                 + "disturbLongPressGesture:function(){uexDispatcher.dispatch('uexWindow','disturbLongPressGesture',jo(arguments));},"
                 + "setPageInContainer:function(){uexDispatcher.dispatch('uexWindow','setPageInContainer',jo(arguments));},"
                 + "closePluginViewContainer:function(){uexDispatcher.dispatch('uexWindow','closePluginViewContainer',jo(arguments));},"
+                + "clearPluginViewContainer:function(){uexDispatcher.dispatch('uexWindow','clearPluginViewContainer',jo(arguments));},"
                 + "createPluginViewContainer:function(){uexDispatcher.dispatch('uexWindow','createPluginViewContainer',jo(arguments));},"
                 + "showPluginViewContainer:function(){uexDispatcher.dispatch('uexWindow','showPluginViewContainer',jo(arguments));},"
                 + "hidePluginViewContainer:function(){uexDispatcher.dispatch('uexWindow','hidePluginViewContainer',jo(arguments));},"

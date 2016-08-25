@@ -22,6 +22,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
@@ -41,6 +42,7 @@ import org.zywx.wbpalmstar.engine.EBrowserView;
 import org.zywx.wbpalmstar.engine.universalex.EUExUtil;
 import org.zywx.wbpalmstar.platform.encryption.PEncryption;
 import org.zywx.wbpalmstar.widgetone.dataservice.WDataManager;
+import org.zywx.wbpalmstar.widgetone.dataservice.WidgetPackageMgr;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -81,9 +83,19 @@ public class BUtility {
     public final static String F_Widget_RES_path = "widget/wgtRes/";
     public final static String F_Widget_RES_SCHEMA = "res://";
     public final static String F_SBOX_SCHEMA = "box://";
+    public final static String m_loadingImageSp = "loadingImageSp";
+    public final static String m_loadingImagePath = "loadingImagePath";
+    public final static String m_loadingImageTime= "loadingImageTime";
 
     public static boolean isDes = false;
     public static String g_desPath = "";
+    public static String widgetOneRootPath = "";
+    /** 安装补丁包类型 1：网页包；2：插件包；3：网页和插件 */
+    public final static int INSTALL_PATCH_WIDGET = 1;
+    public final static int INSTALL_PATCH_PLUGIN = 2;
+    public final static int INSTALL_PATCH_ALL = 3;
+    public final static int PATCH_WIDGET_FLAG = 1;
+    public final static int PATCH_PLUGIN_FLAG = 2;
 
     // 缩放图片
     public static Bitmap imageScale(Bitmap bitmap, int dst_w, int dst_h) {
@@ -200,15 +212,32 @@ public class BUtility {
 
     }
 
+    /**
+     * @return 沙箱目录路径
+     */
+    public static String getSBoxRootPath(Context context) {
+        return context.getFilesDir().getAbsolutePath() + "/";
+    }
+
+    /**
+     * 得到widgetone的目录路径
+     * 
+     * @return ../widgetone/
+     */
+    public static String getWidgetOneRootPath() {
+        return widgetOneRootPath;
+    }
+
     // 初始化widget的文件夹
     public static void initWidgetOneFile(Context context, String appId) {
         String root = null;
         appId += "/";
-        if (sdCardIsWork()) {
+        if (!WDataManager.isWidgetOneSBox && sdCardIsWork()) {
             root = getSdCardRootPath();
         } else {
-            root = context.getFilesDir().getAbsolutePath() + "/";
+            root = getSBoxRootPath(context);
         }
+        widgetOneRootPath = root + F_BASE_WGT_PATH;
         String[] fileDir = {root + F_APP_PATH + appId, root + F_WIDGET_PATH,
                 root + F_APP_PATH + appId + F_APP_VIDEO,
                 root + F_APP_PATH + appId + F_APP_PHOTO,
@@ -535,7 +564,8 @@ public class BUtility {
                     + path.substring(F_WIDGET_SCHEMA.length());
         } else if (path.startsWith(F_Widget_RES_SCHEMA)) {
             if (wgtType == 0) {
-                if (WDataManager.isUpdateWidget) {
+                if (WDataManager.isUpdateWidget
+                        && WDataManager.isCopyAssetsFinish) {
                     return WDataManager.m_sboxPath + F_Widget_RES_path
                             + path.substring(F_Widget_RES_SCHEMA.length());
                 } else {
@@ -880,6 +910,55 @@ public class BUtility {
         return inSampleSize;
     }
 
+    public static Bitmap createBitmapWithPath(String pathName, int reqWidth,
+                                              int reqHeight) {
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(pathName, opts);
+        opts.inSampleSize = calculateInSampleSize(opts, reqWidth, reqHeight);
+        opts.inTempStorage = new byte[64 * 1024];
+        opts.inJustDecodeBounds = false;
+        Bitmap bm = BitmapFactory.decodeFile(pathName, opts);
+        return bm;
+    }
+
+    public static Bitmap getLoadingBitmap(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(
+                BUtility.m_loadingImageSp, Context.MODE_PRIVATE);
+        String path = sp.getString(m_loadingImagePath, "");
+        InputStream input = null;
+        if (TextUtils.isEmpty(path)) {
+            input = context.getResources().openRawResource(
+                    EUExUtil.getResDrawableID("startup_bg_16_9"));
+        } else {
+            if (path.startsWith(F_Widget_RES_path)) {
+                try {
+                    input = context.getResources().getAssets().open(path);
+                } catch (Exception e) {
+                    input = context.getResources().openRawResource(
+                            EUExUtil.getResDrawableID("startup_bg_16_9"));
+                    e.printStackTrace();
+                }
+            } else {
+                File file = new File(path);
+                if (!file.exists()) {
+                    input = context.getResources().openRawResource(
+                            EUExUtil.getResDrawableID("startup_bg_16_9"));
+                    BDebug.d("The loading path " + path + " does not exist");
+                }
+            }
+        }
+        DisplayMetrics dm = new DisplayMetrics();
+        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(dm);
+        Bitmap bm = null;
+        if (input != null) {
+            bm = createBitmapWithStream(input, dm.widthPixels, dm.heightPixels);
+        } else {
+            bm = createBitmapWithPath(path, dm.widthPixels, dm.heightPixels);
+        }
+        return bm;
+    }
+
     /**
      * @param encrypt
      *            加密或解密的字符串
@@ -1016,5 +1095,33 @@ public class BUtility {
             e.printStackTrace();
             return inputStream;
         }
+    }
+
+    /**
+     * 安装主应用补丁包
+     * 
+     * @param context
+     * @param appId
+     * @param installType：安装补丁包类型1：网页包；2：插件包；3：网页和插件
+     * @return 安装成功，返回版本号；失败，返回空。
+     */
+    public static String installWidgetPatch(Context context, String appId,
+            int installType) {
+        return WidgetPackageMgr.installWidgetPatch(context, appId, installType);
+    }
+
+    /**
+     * 安装子应用（包括全量包、补丁包）,子应用的安装、升级，不区分全量包、补丁包。
+     * 
+     * @param appId
+     * @param filePath：压缩包位置
+     * @param desPath：安装位置
+     * @param encoding
+     * @return 安装路径
+     */
+    public static String installSubWidget(String appId, String filePath,
+            String desPath, String encoding) {
+        return WidgetPackageMgr.installSubWidget(appId, filePath, desPath,
+                encoding);
     }
 }
