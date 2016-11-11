@@ -108,7 +108,7 @@ public final class EBrowserActivity extends BaseActivity {
             loadResError();
             return;
         }
-        if (AppCan.ACTION_APPCAN_SDK.equals(getIntent().getAction())) {
+        if (!AppCan.ACTION_APPCAN_SDK.equals(getIntent().getAction())) {
             startMaskActivity();
         }
         mVisable = true;
@@ -120,8 +120,6 @@ public final class EBrowserActivity extends BaseActivity {
         mBrowserAround = new EBrowserAround(this);
         setContentView(mEBrwMainFrame);
         initInternalBranch();
-
-        ACEDes.setContext(this);
 
         Message loadDelayMsg = mEHandler
                 .obtainMessage(EHandler.F_MSG_LOAD_HIDE_SH);
@@ -407,7 +405,9 @@ public final class EBrowserActivity extends BaseActivity {
         EUtil.loge("App onDestroy");
         super.onDestroy();
         reflectionPluginMethod("onActivityDestroy");
-        Process.killProcess(Process.myPid());
+        if (!AppCan.getInstance().isWidgetSdk()) {
+            Process.killProcess(Process.myPid());
+        }
     }
 
     @Override
@@ -530,7 +530,7 @@ public final class EBrowserActivity extends BaseActivity {
                 return;
             }
         }
-        if (!showDialog) {
+        if (!showDialog||AppCan.getInstance().isWidgetSdk()) {
             exitBrowser();
             return;
         }
@@ -565,6 +565,11 @@ public final class EBrowserActivity extends BaseActivity {
         mBrowserAround.removeViewImmediate();
         clean();
         finish();
+        if (AppCan.getInstance().isWidgetSdk()){
+            if (AppCan.getInstance().mFinishListener!=null){
+                AppCan.getInstance().mFinishListener.onFinish(0,null);
+            }
+        }
     }
 
     private final void clean() {

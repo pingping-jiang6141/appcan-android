@@ -5,27 +5,22 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
-import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.zywx.wbpalmstar.base.BUtility;
-import org.zywx.wbpalmstar.base.listener.OnAppCanInitListener;
+import org.zywx.wbpalmstar.base.util.ConfigXmlUtil;
 import org.zywx.wbpalmstar.engine.external.Compat;
 import org.zywx.wbpalmstar.engine.universalex.EUExUtil;
 import org.zywx.wbpalmstar.widgetone.dataservice.WWidgetData;
 
-import java.io.InputStream;
 import java.lang.ref.WeakReference;
 
 
@@ -57,7 +52,7 @@ public class LoadingActivity extends Activity {
         mHandler=new LoadingHandler(this);
         handleIntent();
         initRootView();
-        addLoadingImage(mRootLayout);
+        ConfigXmlUtil.setStatusBarColor(this, Color.TRANSPARENT);
         setContentView(mRootLayout);
         registerFinishReceiver();
         addDevelopInfo();
@@ -83,21 +78,6 @@ public class LoadingActivity extends Activity {
         mRootLayout.setLayoutParams(layoutParams);
     }
 
-    private void addLoadingImage(ViewGroup parent) {
-        InputStream inputStream = getResources().openRawResource(
-                getResources().getIdentifier("startup_bg_16_9","drawable",getPackageName()));
-        DisplayMetrics dm = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(dm);
-        Bitmap bm = BUtility.createBitmapWithStream(inputStream,
-                dm.widthPixels, dm.heightPixels);
-        if (bm != null) {
-            ImageView imageView = new ImageView(this);
-            imageView.setScaleType(ImageView.ScaleType.FIT_XY);
-            imageView.setImageBitmap(bm);
-            parent.addView(imageView);
-        }
-    }
-
     private void addDevelopInfo() {
         if (EBrowserActivity.develop) {
             TextView worn = new TextView(this);
@@ -108,7 +88,7 @@ public class LoadingActivity extends Activity {
                     Compat.FILL, Compat.WRAP);
             wornPa.gravity = Gravity.TOP;
             wornPa.leftMargin = 10;
-            wornPa.topMargin = 10;
+            wornPa.topMargin = 60;
             worn.setLayoutParams(wornPa);
             mRootLayout.addView(worn);
         }
@@ -155,18 +135,8 @@ public class LoadingActivity extends Activity {
     }
 
     private void startEngine() {
-        AppCan.getInstance().init(this, new OnAppCanInitListener() {
-            @Override
-            public void onInit() {
-                AppCan.getInstance().setShowLoading(true);
-                AppCan.getInstance().start(LoadingActivity.this,getIntent().getExtras());
-            }
-
-            @Override
-            public void onError() {
-
-            }
-        });
+        AppCan.getInstance().setWidgetSdk(false);
+        AppCan.getInstance().start(LoadingActivity.this,getIntent().getExtras());
     }
 
     private static class LoadingHandler extends Handler{

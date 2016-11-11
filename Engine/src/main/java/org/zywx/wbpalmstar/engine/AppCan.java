@@ -11,10 +11,12 @@ import android.os.Handler;
 import android.os.Looper;
 
 import org.xmlpull.v1.XmlPullParser;
+import org.zywx.wbpalmstar.acedes.ACEDes;
 import org.zywx.wbpalmstar.base.BConstant;
 import org.zywx.wbpalmstar.base.BDebug;
 import org.zywx.wbpalmstar.base.BUtility;
 import org.zywx.wbpalmstar.base.WebViewSdkCompat;
+import org.zywx.wbpalmstar.base.listener.OnAppCanFinishListener;
 import org.zywx.wbpalmstar.base.listener.OnAppCanInitListener;
 import org.zywx.wbpalmstar.base.util.SpManager;
 import org.zywx.wbpalmstar.base.vo.NameValuePairVO;
@@ -47,8 +49,8 @@ public class AppCan {
     protected ECrashHandler mCrashReport;
     private Context mContext;//Application
     private WWidgetData mWidgetData;
-    private boolean showLoading=false;
-
+    private boolean mIsWidgetSdk =true;
+    OnAppCanFinishListener mFinishListener;
     private AppCan(){
     }
 
@@ -76,6 +78,7 @@ public class AppCan {
         mListenerQueue.add(pushlistener);
         BDebug.init();
         BConstant.app = (Application) mContext;
+        ACEDes.setContext(mContext);
         EUExUtil.init(mContext);
         WebViewSdkCompat.initInApplication(mContext);
         mCrashReport = ECrashHandler.getInstance(mContext);
@@ -137,7 +140,7 @@ public class AppCan {
             public void run() {
                 WebViewSdkCompat.initInActivity(activity);
                 Intent intent = new Intent(mContext, EBrowserActivity.class);
-                if (showLoading){
+                if (mIsWidgetSdk){
                     intent.setAction(ACTION_APPCAN_SDK);
                 }
                 if (null != bundle) {
@@ -152,6 +155,12 @@ public class AppCan {
             }
         });
 
+    }
+
+    public void registerFinishCallback(OnAppCanFinishListener listener){
+        if (listener!=null){
+            AppCan.this.mFinishListener=listener;
+        }
     }
 
     /**
@@ -376,7 +385,12 @@ public class AppCan {
         }
     }
 
-    public void setShowLoading(boolean showLoading) {
-        this.showLoading = showLoading;
+    public void setWidgetSdk(boolean widgetSdk) {
+        this.mIsWidgetSdk = widgetSdk;
     }
+
+    public boolean isWidgetSdk(){
+        return mIsWidgetSdk;
+    }
+
 }

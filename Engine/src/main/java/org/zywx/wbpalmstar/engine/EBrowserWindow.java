@@ -23,10 +23,10 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Point;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.support.annotation.Keep;
 import android.support.v4.view.ViewPager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -34,11 +34,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
 import android.view.inputmethod.InputMethodManager;
-import android.webkit.WebView;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -49,6 +47,7 @@ import org.zywx.wbpalmstar.base.BUtility;
 import org.zywx.wbpalmstar.base.view.SwipeView;
 import org.zywx.wbpalmstar.engine.EBrowserHistory.EHistoryEntry;
 import org.zywx.wbpalmstar.engine.external.Compat;
+import org.zywx.wbpalmstar.engine.multipop.MultiPopAdapter;
 import org.zywx.wbpalmstar.engine.universalex.EUExCallback;
 import org.zywx.wbpalmstar.engine.universalex.EUExScript;
 import org.zywx.wbpalmstar.engine.universalex.EUExUtil;
@@ -170,7 +169,6 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
                 /**wanglei del 20151124*/
 //                mMainView.setBrwViewBackground(mBroWidget.getWidget().getOpaque(),
 //                        mBroWidget.getWidget().m_bgColor, mBroWidget.getWidget().m_indexUrl);
-
                 /**wanglei add 20151124*/
                 mBounceView.setBounceViewBackground(mBroWidget.getWidget().getOpaque(),
                         mBroWidget.getWidget().m_bgColor, mBroWidget.getWidget().m_indexUrl, mMainView);
@@ -1401,11 +1399,6 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
 
     }
 
-    public void myDrawPage(Canvas canvas) {
-        mMainView.myDrawPage(canvas);
-        // mMainView.draw(canvas);
-    }
-
     private void notifyTopShown() {
         mMainView.loadUrl(EUExScript.F_UEX_SCRIPT_TOP_SHOW);
     }
@@ -1467,10 +1460,6 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
 
     public void setSupportZoom() {
         mMainView.setSupportZoom();
-    }
-
-    public void dumpPageInfo(int type) {
-        mMainView.dumpPageInfo(type);
     }
 
     protected void stopLoad() {
@@ -2463,6 +2452,35 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
 
     }
 
+    public boolean setPopoverVisibility(String popName, int visible) {
+        int isVisible = ((0 == visible) ? View.GONE : View.VISIBLE);
+        View vTarget = null;
+        EBrowserView bv = mPopTable.get(popName);
+        if (null != bv) {
+            vTarget = (View) bv.getParent();
+        } else {
+
+            ArrayList<EBrowserView> list = mMultiPopTable.get(popName);
+            if (null != list && list.size() > 1) {
+                EBrowserView mainWebview = list.get(0);
+
+                if (mainWebview != null) {
+
+                    vTarget = (View) mainWebview.getParent();
+                }
+            }
+        }
+
+        if (vTarget != null) {
+            vTarget.setVisibility(isVisible);
+            return true;
+        }else{
+            BDebug.e("target popover is not found");
+        }
+        return false;
+    }
+
+
     /**
      * 设置window是否开启硬件加速
      *
@@ -2886,5 +2904,10 @@ public class EBrowserWindow extends SwipeView implements AnimationListener {
                 }
             }
         }
+    }
+
+    @Keep
+    public Map<String, ViewPager> getMultiPopPagerMap(){
+        return mMultiPopPager;
     }
 }
