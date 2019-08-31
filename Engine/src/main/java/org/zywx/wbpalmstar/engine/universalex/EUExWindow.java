@@ -41,6 +41,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
@@ -54,6 +55,7 @@ import org.zywx.wbpalmstar.base.BDebug;
 import org.zywx.wbpalmstar.base.BUtility;
 import org.zywx.wbpalmstar.base.ResoureFinder;
 import org.zywx.wbpalmstar.base.util.AppCanAPI;
+import org.zywx.wbpalmstar.base.util.ConfigXmlUtil;
 import org.zywx.wbpalmstar.base.util.SpManager;
 import org.zywx.wbpalmstar.base.vo.CreateContainerVO;
 import org.zywx.wbpalmstar.base.vo.SetSwipeCloseEnableVO;
@@ -70,6 +72,7 @@ import org.zywx.wbpalmstar.base.vo.WindowOpenMultiPopoverVO;
 import org.zywx.wbpalmstar.base.vo.WindowOpenPopoverVO;
 import org.zywx.wbpalmstar.base.vo.WindowOpenSlibingVO;
 import org.zywx.wbpalmstar.base.vo.WindowOpenVO;
+import org.zywx.wbpalmstar.base.vo.WindowOptionsVO;
 import org.zywx.wbpalmstar.base.vo.WindowPromptResultVO;
 import org.zywx.wbpalmstar.base.vo.WindowPromptVO;
 import org.zywx.wbpalmstar.base.vo.WindowSetFrameVO;
@@ -209,12 +212,37 @@ public class EUExWindow extends EUExBase {
     public static final String KEY_HARDWARE = "hardware";//硬件加速
     public static final String KEY_DOWNLOAD_CALLBACK = "downloadCallback";//下载回调
     public static final String KEY_USER_AGENT = "userAgent";
-
+    public static final String KEY_EXE_JS = "exeJS";
+    public static final String KEY_EXE_SCALE = "exeScale";
+    private EBrowserView mInParent;
     public EUExWindow(Context context, EBrowserView inParent) {
         super(context, inParent);
         inParent.setScrollCallBackContex(this);
         finder = ResoureFinder.getInstance(context);
-
+        mInParent=inParent;
+    }
+    //获取状态栏的高度
+    @AppCanAPI
+    public int getStatusBarHeight(String[] param){
+      int statusBarHeight=0;
+        try {
+            statusBarHeight=ConfigXmlUtil.getStatusBarHeight((EBrowserActivity) mContext);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return statusBarHeight;
+    }
+    //判断屏幕是否全屏
+    @AppCanAPI
+    public boolean isFullScreen(String[] param){
+        boolean isFullScreen=false;
+        try {
+           EBrowserActivity activity= (EBrowserActivity) mContext;
+           isFullScreen= (activity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_FULLSCREEN) == WindowManager.LayoutParams.FLAG_FULLSCREEN&&WWidgetData.sFullScreen;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return isFullScreen;
     }
 
     public void open(String[] params) {
@@ -250,6 +278,7 @@ public class EUExWindow extends EUExBase {
         int hardware = -1;
         int downloadCallback = 0;
         String userAgent = "";
+        String exeJS = "";
         if (parm.length > 7&&parm[7]!=null) {
             animDuration = parm[7];
         }
@@ -273,9 +302,163 @@ public class EUExWindow extends EUExBase {
                 }
                 downloadCallback = data.optInt(KEY_DOWNLOAD_CALLBACK, 0);
                 userAgent = data.optString(KEY_USER_AGENT, "");
+                if (data.has(KEY_EXE_JS)){
+                    exeJS = data.getString(KEY_EXE_JS);
+                }
             } catch (JSONException ignored) {
             }
         }
+        String cUrl = mBrwView.getCurrentUrl();
+        boolean op = EBrowser.checkFlag(EBrowser.F_BRW_FLAG_OPENING);
+        boolean hi = curWind.isHidden();
+        boolean eq = curWind.getName().equals(inWindowName);
+        if (op || hi || eq) {
+            return;
+        }
+        int width = 0;
+        int height = 0;
+        int flag = 0;
+        int dataType = 0;
+        int animitionId = EBrowserAnimation.ANIM_ID_NONE;
+        long duration = EBrowserAnimation.defaultDuration;
+        try {
+            if (null != inAnimitionID && inAnimitionID.length() != 0) {
+                animitionId = Integer.parseInt(inAnimitionID);
+            }
+            if (null != animDuration && animDuration.length() != 0
+                    && !animDuration.equals("undefined")) {
+                duration = Long.parseLong(animDuration);
+            }
+            dataType = Integer.valueOf(inDataType);
+            width = parseWidth(inWidth);
+            height = parseHeight(inHeight);
+            flag = Integer.parseInt(inFlag);
+        } catch (Exception e) {
+            if (BDebug.DEBUG){
+                e.printStackTrace();
+            }
+            errorCallback(0, EUExCallback.F_E_UEXWINDOW_OPEN, "Illegal parameter");
+            return;
+        }
+        WWidgetData wgt = mBrwView.getCurrentWidget();
+        EBrwViewEntry windEntry = new EBrwViewEntry(EBrwViewEntry.VIEW_TYPE_MAIN);
+        String data = null;
+        if (EBrwViewEntry.isData(dataType)) {
+            data = inData;
+        } else {
+            String wgtroot = "wgtroot://";
+            if (inData.startsWith(wgtroot)) {
+                String initUrl ;
+                if(wgt.m_indexUrl.indexOf("Http://")>-1||wgt.m_indexUrl.indexOf("https://")>-1) {
+                    initUrl = "file:///android_asset/widget/";
+                }else {
+                    initUrl = wgt.m_indexUrl;
+                }
+                inData = inData.substring(wgtroot.length());
+                inData = BUtility.makeUrl(initUrl, inData);
+                data = inData;
+            } else {
+                data = BUtility.makeUrl(cUrl, inData);
+//                data=BUtility.makeRealPath(inData,mInParent);
+            }
+            windEntry.mRelativeUrl = inData;
+        }
+        String query = null;
+        if (Build.VERSION.SDK_INT >= 11) {
+            if (EBrwViewEntry.isUrl(dataType) && data != null) {
+                int index = data.indexOf("?");
+                if (index > 0) {
+                    query = data.substring(index + 1);
+                    if (!data.startsWith("http")) {
+                        data = data.substring(0, index);
+                    }
+                }
+            }
+        }
+        windEntry.mPreWindName = curWind.getName();
+        windEntry.mQuery = query;
+        windEntry.mWindName = inWindowName;
+        windEntry.mDataType = dataType;
+        windEntry.mData = data;
+        windEntry.mAnimId = animitionId;
+        windEntry.mWidth = width;
+        windEntry.mHeight = height;
+        windEntry.mFlag = flag;
+        windEntry.mAnimDuration = duration;
+        windEntry.mOpaque = opaque;
+        windEntry.mBgColor = bgColor;
+        windEntry.mHardware = hardware;
+        windEntry.mDownloadCallback = downloadCallback;
+        windEntry.mUserAgent = userAgent;
+        windEntry.hasExtraInfo = hasExtraInfo;
+        windEntry.mExeJS = exeJS;
+        curWind.createWindow(mBrwView, windEntry);
+    }
+
+    /**
+     * 打开一个公众号样式的窗口
+     *
+     * @param params
+     */
+    @AppCanAPI
+    public void openWithOptions(String[] params) {
+        WindowOpenVO openVO=DataHelper.gson.fromJson(params[0],WindowOpenVO.class);
+        EBrowserWindow curWind = mBrwView.getBrowserWindow();
+        if (null == curWind) {
+            return;
+        }
+        String inWindowName = openVO.name;
+        if (!checkWindPermission(inWindowName)) {
+            showPermissionDialog(inWindowName);
+            return;
+        }
+        String inDataType = String.valueOf(openVO.dataType);
+        String inData = openVO.data;
+        String inAnimitionID = String.valueOf(openVO.animID);
+        String inWidth = String.valueOf(openVO.w);
+        String inHeight = String.valueOf(openVO.h);
+        String inFlag = String.valueOf(openVO.flag);
+        String animDuration = String.valueOf(openVO.animDuration);
+
+        int windowStyle = openVO.windowStyle;
+        WindowOptionsVO windowOptionsVO = openVO.windowOptions;
+
+        boolean opaque = false;
+        /**赋初值，避免
+         * 不传bgColor崩溃*/
+        String bgColor = "#00000000";
+        boolean hasExtraInfo = false;
+        int hardware = -1;
+        int downloadCallback = 0;
+        String userAgent = "";
+        String exeJS = "";
+        String jsonData = openVO.extras == null ? null : DataHelper.gson.toJson(openVO.extras);
+        if (jsonData != null){
+            try {
+                JSONObject json = new JSONObject(jsonData);
+                String extraInfo = json.getString(EBrwViewEntry.TAG_EXTRAINFO);
+                JSONObject data = new JSONObject(extraInfo);
+                if (data.has(WWidgetData.TAG_WIN_BG_OPAQUE)) {
+                    opaque = Boolean.valueOf(data.getString(WWidgetData.TAG_WIN_BG_OPAQUE));
+                    hasExtraInfo = true;
+                }
+                if (data.has(WWidgetData.TAG_WIN_BG_COLOR)) {
+                    bgColor = data.getString(WWidgetData.TAG_WIN_BG_COLOR);
+                    hasExtraInfo = true;
+                }
+                hardware = data.optInt(KEY_HARDWARE, -1);
+                if (hardware != -1) {
+                    hasExtraInfo = true;
+                }
+                downloadCallback = data.optInt(KEY_DOWNLOAD_CALLBACK, 0);
+                userAgent = data.optString(KEY_USER_AGENT, "");
+                if (data.has(KEY_EXE_JS)){
+                    exeJS = data.getString(KEY_EXE_JS);
+                }
+            } catch (JSONException ignored) {
+            }
+        }
+
         String cUrl = mBrwView.getCurrentUrl();
         boolean op = EBrowser.checkFlag(EBrowser.F_BRW_FLAG_OPENING);
         boolean hi = curWind.isHidden();
@@ -353,8 +536,42 @@ public class EUExWindow extends EUExBase {
         windEntry.mDownloadCallback = downloadCallback;
         windEntry.mUserAgent = userAgent;
         windEntry.hasExtraInfo = hasExtraInfo;
+        //处理窗口样式参数
+        windEntry.mWindowStyle = windowStyle;
+        windEntry.mWindowOptions = windowOptionsVO;
+        windEntry.mExeJS = exeJS;
         curWind.createWindow(mBrwView, windEntry);
     }
+    @AppCanAPI
+    public void setWindowOptions(String[] params){
+        try {
+            String windowOptionsStr = new JSONObject(params[0]).getString("windowOptions");
+            boolean isBottomShow=new JSONObject(windowOptionsStr).has("isBottomBarShow");
+            WindowOptionsVO windowOptionsVO = DataHelper.gson.fromJson(windowOptionsStr, WindowOptionsVO.class);
+            mBrwView.getBrowserWindow().setWindowOptions(windowOptionsVO,isBottomShow,false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @AppCanAPI
+    public void setMpWindowStatus(String[] params){
+        try {
+            if(params.length<1){
+                return;
+            }
+            int marginString=Integer.parseInt(params[0]);
+            if(marginString==1){
+                mBrwView.getBrowserWindow().setMpWindowStatus(true);
+            }else {
+                mBrwView.getBrowserWindow().setMpWindowStatus(false);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public void openPresentWindow(String[] params){//与iOS保持一致添加的接口
         open(params);
@@ -545,7 +762,7 @@ public class EUExWindow extends EUExBase {
         if (parm!=null&&parm.length>0&&isJsonString(parm[0])){
             WindowAnimVO closeVO = DataHelper.gson.fromJson(parm[0], WindowAnimVO.class);
             parm = new String[]{String.valueOf(closeVO.animID),
-                                String.valueOf(closeVO.animDuration)};
+                    String.valueOf(closeVO.animDuration)};
         }
         Message msg = mHandler.obtainMessage();
         msg.what = MSG_FUNCTION_CLOSE;
@@ -577,10 +794,10 @@ public class EUExWindow extends EUExBase {
             return;
         }
 
-        if ("root".equals(mBrwView.getWindowName())) {
-            ((EBrowserActivity) mContext).exitApp(true);
-            return;
-        }
+//        if ("root".equals(mBrwView.getWindowName())) {
+//            ((EBrowserActivity) mContext).exitApp(true);
+//            return;
+//        }
         String inAnimitionID = null;
         String animDuration = null;
         switch (parm.length) {
@@ -903,7 +1120,6 @@ public class EUExWindow extends EUExBase {
         msg.setData(bd);
         mHandler.sendMessage(msg);
     }
-
     public void handleSetSlidingWin(String[] param) {
         WindowSetSlidingWindowVO slidingWindowVO = DataHelper.gson.fromJson(param[0],
                 WindowSetSlidingWindowVO.class);
@@ -919,7 +1135,7 @@ public class EUExWindow extends EUExBase {
         }
         if (slidingWindowVO.leftSliding != null) {
             slidingMode = SlidingMenu.LEFT;
-            with = slidingWindowVO.leftSliding.width;
+            with = (int) (slidingWindowVO.leftSliding.width*mInParent.getScaleWrap());
             url = slidingWindowVO.leftSliding.url;
             if (with > 0) {
                 activity.globalSlidingMenu.setBehindWidth(with);
@@ -932,7 +1148,7 @@ public class EUExWindow extends EUExBase {
 
         if (slidingWindowVO.rightSliding != null) {
             slidingMode = SlidingMenu.RIGHT;
-            with = slidingWindowVO.rightSliding.width;
+            with = (int) (slidingWindowVO.rightSliding.width*mInParent.getScaleWrap());
             url = slidingWindowVO.rightSliding.url;
             if (with > 0) {
                 activity.globalSlidingMenu.setBehindWidth(with);
@@ -1130,6 +1346,8 @@ public class EUExWindow extends EUExBase {
         int hardware = -1;
         int downloadCallback = 0;
         String userAgent = "";
+        String exeJS = "";
+        int exeScale = -1;
         if (parm.length > 11 && parm[11] != null) {
             String jsonData = parm[11];
             try {
@@ -1150,6 +1368,12 @@ public class EUExWindow extends EUExBase {
                 }
                 downloadCallback = data.optInt(KEY_DOWNLOAD_CALLBACK, 0);
                 userAgent = data.optString(KEY_USER_AGENT, "");
+                if (data.has(KEY_EXE_JS)){
+                    exeJS = data.getString(KEY_EXE_JS);
+                }
+                if(data.has(KEY_EXE_SCALE)){
+                    exeScale=Integer.parseInt(data.optString(KEY_EXE_SCALE));
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -1177,11 +1401,11 @@ public class EUExWindow extends EUExBase {
                 y = (int) (Integer.valueOf(inY) * sc);
             }
             if (null != inWidth && inWidth.length() != 0
-                    && !"0".equals(inWidth)) {
+                    && !"0".equals(inWidth)&&!"-1".equals(inWidth)) {
                 w = (int) (Integer.valueOf(inWidth) * sc);
             }
             if (null != inHeight && inHeight.length() != 0
-                    && !"0".equals(inHeight)) {
+                    && !"0".equals(inHeight)&& !"-1".equals(inHeight)) {
                 h = (int) (Integer.valueOf(inHeight) * sc);
             }
             if (null != inFontSize && inFontSize.length() != 0) {
@@ -1203,7 +1427,8 @@ public class EUExWindow extends EUExBase {
         if (null != inUrl) {
             String wgtroot = "wgtroot://";
             if (inUrl.startsWith(wgtroot)) {
-                String initUrl = wgt.m_indexUrl;
+//                String initUrl = wgt.m_indexUrl;
+                String initUrl = "file:///android_asset/widget/";
                 inUrl = inUrl.substring(wgtroot.length());
                 inUrl = BUtility.makeUrl(initUrl, inUrl);
                 url = inUrl;
@@ -1232,6 +1457,8 @@ public class EUExWindow extends EUExBase {
         popEntry.mDownloadCallback = downloadCallback;
         popEntry.mUserAgent = userAgent;
         popEntry.mHardware = hardware;
+        popEntry.mExeJS = exeJS;
+        popEntry.mExeScale = exeScale;
         popEntry.hasExtraInfo = hasExtraInfo;
         String query = null;
         if (Build.VERSION.SDK_INT >= 11) {
@@ -1871,7 +2098,7 @@ public class EUExWindow extends EUExBase {
             BDebug.e("curWind is null");
             return false;
         }
-       return curWind.setPopoverVisibility(popName, visible);
+        return curWind.setPopoverVisibility(popName, visible);
     }
 
     public void bringPopoverToFront(String[] parm) {
@@ -2507,6 +2734,7 @@ public class EUExWindow extends EUExBase {
      * @param params
      * @return
      */
+    @AppCanAPI
     public boolean removeLocalData(String[] params){
         String key = null;
         if (params.length > 0){
@@ -2967,15 +3195,15 @@ public class EUExWindow extends EUExBase {
         if (inButtonLables != null && inButtonLables.length == 2) {
             mPrompt = PromptDialog.show(mContext, inTitle, inMessage, inDefaultValue,hint, inButtonLables[0],mode, new
                     OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    final PromptDialog wPromptDialog = (PromptDialog) dialog;
-                    hideSoftKeyboard(wPromptDialog.getWindowToken());
-                    dialog.dismiss();
-                    mPrompt = null;
-                    resultPrompt(wPromptDialog.getInput(),0,callbackId);
-                }
-            }, inButtonLables[1], new OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            final PromptDialog wPromptDialog = (PromptDialog) dialog;
+                            hideSoftKeyboard(wPromptDialog.getWindowToken());
+                            dialog.dismiss();
+                            mPrompt = null;
+                            resultPrompt(wPromptDialog.getInput(),0,callbackId);
+                        }
+                    }, inButtonLables[1], new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     final PromptDialog wPromptDialog = (PromptDialog) dialog;
@@ -3077,12 +3305,12 @@ public class EUExWindow extends EUExBase {
     }
 
     public void actionSheet(String[] params) {
-       if (isFirstParamExistAndIsJson(params)){
-           WindowJsonWrapper.actionSheet(this,DataHelper.gson.fromJson(params[0],
-                   WindowActionSheetVO.class),params.length>1?params[1]:null);
-       }else{
-           actionSheetMsg(params);
-       }
+        if (isFirstParamExistAndIsJson(params)){
+            WindowJsonWrapper.actionSheet(this,DataHelper.gson.fromJson(params[0],
+                    WindowActionSheetVO.class),params.length>1?params[1]:null);
+        }else{
+            actionSheetMsg(params);
+        }
     }
 
     public void actionSheetMsg(String[] params) {
@@ -3491,7 +3719,7 @@ public class EUExWindow extends EUExBase {
         lp.leftMargin = (int) inputVO.getX();
         lp.topMargin = (int) inputVO.getY();
         if(mBrwView != null){
-        	mBrwView.addViewToCurrentWindow(containerViewPager, lp);
+            mBrwView.addViewToCurrentWindow(containerViewPager, lp);
             String js = SCRIPT_HEADER + "if(" + function_cbCreatePluginViewContainer + "){"
                     + function_cbCreatePluginViewContainer + "(" + inputVO.getId() + "," + EUExCallback.F_C_TEXT + ",'"
                     + "success" + "'" + SCRIPT_TAIL;
@@ -3623,6 +3851,7 @@ public class EUExWindow extends EUExBase {
                             views.get(j).removeAllViews();
                         }
                         views.clear();
+                        adapter.notifyDataSetChanged();
                         pager = null;
                         String js = SCRIPT_HEADER + "if(" + function_cbClosePluginViewContainer + "){"
                                 + function_cbClosePluginViewContainer + "(" + opid + "," + EUExCallback.F_C_TEXT + ",'"
@@ -3670,6 +3899,7 @@ public class EUExWindow extends EUExBase {
                             views.get(j).removeAllViews();
                         }
                         views.clear();
+                        adapter.notifyDataSetChanged();
                         String js = SCRIPT_HEADER + "if(" + function_cbClearPluginViewContainer + "){"
                                 + function_cbClearPluginViewContainer + "(" + opid + "," + EUExCallback.F_C_TEXT + ",'"
                                 + "success" + "'" + SCRIPT_TAIL;

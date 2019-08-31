@@ -44,7 +44,7 @@ public class EBrowserSetting implements EBrowserBaseSetting {
             + "(KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
 
     public static final String USERAGENT = FROYO_USERAGENT;
-    public static final String USERAGENT_APPCAN = " Appcan/3.1";
+    public static final String USERAGENT_APPCAN = BConstant.USERAGENT_APPCAN;
     public static String USERAGENT_NEW;
 
     protected WebSettings mWebSetting;
@@ -76,6 +76,11 @@ public class EBrowserSetting implements EBrowserBaseSetting {
         mWebSetting.setUserAgentString(USERAGENT_NEW);
         mWebSetting.setRenderPriority(RenderPriority.HIGH);
         mWebSetting.setDefaultTextEncodingName("UTF-8");
+        mWebSetting.setBuiltInZoomControls(true);
+        mWebSetting.setDisplayZoomControls(false);
+        mWebSetting.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        mWebSetting.setDomStorageEnabled(true);//开启DOM storage API功能
+
         if (Build.VERSION.SDK_INT <= 7) {
             invokeHtml5(mWebSetting);
         }
@@ -85,6 +90,10 @@ public class EBrowserSetting implements EBrowserBaseSetting {
         if (webApp) {
             mWebSetting.setUseWideViewPort(true);
 //			mWebSetting.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            //允许混合模式，解决个别页面或者视频无法正常显示和播放的问题（http与https）
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mWebSetting.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            }
             return;
         }
 //		mWebSetting.setCacheMode(WebSettings.LOAD_NO_CACHE);

@@ -60,8 +60,8 @@ public class EUExScript {
                 "      var permanent = params.shift();" +
                 "      this.queue[id].apply(this, params);" +
                 "      if (!permanent) {" +
-                 "        delete this.queue[id];" +
-                 "     }" +
+                "        delete this.queue[id];" +
+                "     }" +
                 "    }" +
                 "  };"+
                 "function fo(){" +
@@ -76,16 +76,20 @@ public class EUExScript {
                 "if (type == \"function\") {" +
                 "          var callbackID = uexCallback.queue.length;" +
                 "          uexCallback.queue[callbackID] = arg;" +
-                "          args[i] = callbackID" +
+                "          args[i] = ''+callbackID" +
                 "        }"+
                 "aTypes[aTypes.length] = type;" +
                 "}" +
-                "var result =JSON.parse(prompt(" + JS_APPCAN_ONJSPARSE_HEADER +
-                "JSON.stringify({uexName:uexName,method:method,args:args,types:aTypes})));" +
-                " if (result.code != 200) {" +
-                "   console.log( \"method call error, code:\" + result.code + \", message: \" + result.result  );" +
-                "}"+
-                "  var content = result.result; " +
+//                "var result =JSON.parse(prompt(" + JS_APPCAN_ONJSPARSE_HEADER +
+//                "JSON.stringify({uexName:uexName,method:method,args:args,types:aTypes})));" +
+//                " if (result.code != 200) {" +
+//                "   console.log( \"method call error, code:\" + result.code + \", message: \" + result.result  );" +
+//                "}"+
+//                "var temp = uexDispatcherNative.dispatch(uexName, method, args);console.log(temp);"+
+//                "var result = JSON.parse(temp);"+
+                "var result = uexDispatcherNative.dispatch(uexName, method, args); "+
+                " var finalResult =JSON.parse(result) ; "+
+                "  var content = finalResult.result; " +
                 "   if (content&&content.funcMaps) { " +
                 "     for (var name in content.funcMaps) { " +
                 "      (function(name){" +
@@ -116,6 +120,8 @@ public class EUExScript {
                 "var b = a[i];" +
                 "if(b instanceof Array || typeof(b)=='number' || typeof(b)=='boolean'){" +
                 "t[i]=b.toString();" +
+                "}else if(typeof(b)=='object'){" +
+                "t[i]=JSON.stringify(b)" +
                 "}else{" +
                 "t[i]=b;" +
                 "}" +
@@ -220,6 +226,8 @@ public class EUExScript {
                 + "publishChannelNotificationForJson:function(){uexDispatcher.dispatch('uexWindow','publishChannelNotificationForJson',jo(arguments));},"
                 + "closeAboveWndByName:function(){uexDispatcher.dispatch('uexWindow','closeAboveWndByName',jo(arguments));},"
                 + "setMultilPopoverFlippingEnbaled:function(){uexDispatcher.dispatch('uexWindow','setMultilPopoverFlippingEnbaled',jo(arguments));},"
+                + "getStatusBarHeight:function(){return uexDispatcher.dispatch('uexWindow','getStatusBarHeight',jo(arguments));},"
+                + "isFullScreen:function(){return uexDispatcher.dispatch('uexWindow','isFullScreen',jo(arguments));},"
 
                 + "openAd:function(){uexDispatcher.dispatch('uexWindow','openAd',jo(arguments));},"
                 + "closePopover:function(){uexDispatcher.dispatch('uexWindow','closePopover',jo(arguments));},"

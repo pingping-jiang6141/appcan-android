@@ -23,6 +23,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.view.View;
+import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.WebView;
 
@@ -59,6 +60,7 @@ public class ACEWebView extends WebView implements DownloadListener {
 
     public void init(EBrowserView eBrowserView) {
         mBroView = eBrowserView;
+        mWebApp=true;
         if (Build.VERSION.SDK_INT <= 7) {
             if (mBaSetting == null) {
                 mBaSetting = new EBrowserSetting(eBrowserView);
@@ -68,7 +70,10 @@ public class ACEWebView extends WebView implements DownloadListener {
             }
 
         } else {
-
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
+                // 适配Android5.0无法正常保存和携带cookie的问题
+                CookieManager.getInstance().setAcceptThirdPartyCookies(this, true);
+            }
             if (mBaSetting == null) {
                 mBaSetting = new EBrowserSetting7(eBrowserView);
                 mBaSetting.initBaseSetting(mWebApp);
@@ -148,10 +153,10 @@ public class ACEWebView extends WebView implements DownloadListener {
     }
 
     public float getScaleWrap() {
-        if (Build.VERSION.SDK_INT<=18){
+//        if (Build.VERSION.SDK_INT<=18){
             return getScale();
-        }
-        return 1.0f;
+//        }
+//        return 1.0f;
     }
 
     public int getScrollYWrap() {
@@ -207,5 +212,8 @@ public class ACEWebView extends WebView implements DownloadListener {
         }
         String info = DataHelper.gson.toJson(infoVO);
         return info;
+    }
+    public View getRealWebView(){
+        return this;
     }
 }

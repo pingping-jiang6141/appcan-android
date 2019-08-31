@@ -29,6 +29,7 @@ import android.graphics.Color;
 import android.support.annotation.Keep;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.Xml;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -36,8 +37,10 @@ import org.zywx.wbpalmstar.acedes.ACEDes;
 import org.zywx.wbpalmstar.base.BDebug;
 import org.zywx.wbpalmstar.base.BUtility;
 import org.zywx.wbpalmstar.base.ResoureFinder;
+import org.zywx.wbpalmstar.base.vo.WidgetConfigVO;
 import org.zywx.wbpalmstar.base.zip.CnZipInputStream;
 import org.zywx.wbpalmstar.base.zip.ZipEntry;
+import org.zywx.wbpalmstar.engine.DataHelper;
 import org.zywx.wbpalmstar.engine.EBrowserView;
 import org.zywx.wbpalmstar.engine.ESystemInfo;
 import org.zywx.wbpalmstar.engine.universalex.EUExUtil;
@@ -965,6 +968,63 @@ public class WDataManager {
         return widgetData;
     }
 
+    /**
+     * 从Json配置中解析widget基本信息
+     *
+     * @return
+     */
+    public WWidgetData getWidgetDataByConfigJson(WidgetConfigVO configVO){
+        if (configVO == null){
+            return null;
+        }
+        int wgtType = WWidgetData.WGT_TYPE_CLOUD;//此处目前写死，指定应用类型，不支持传入自定义。否则可能会与之前的子应用逻辑有一些冲突。
+        String widgetPath = null;
+        if (!configVO.indexUrl.startsWith("/")) {
+            if (isUpdateWidget && isCopyAssetsFinish) {
+                widgetPath = m_sboxPath + F_ROOT_WIDGET_PATH;
+            }else{
+                widgetPath = BUtility.F_ASSET_PATH + F_ROOT_WIDGET_PATH;
+            }
+        } else {
+            File file = new File(configVO.indexUrl);
+            widgetPath = BUtility.F_FILE_SCHEMA
+                    + file.getParentFile().getAbsolutePath() + "/";
+        }
+        String indexUrl = configVO.indexUrl;
+        if ("#".equals(configVO.indexUrl)
+                || configVO.indexUrl == null
+                || configVO.indexUrl.length() == 0) {
+            indexUrl = widgetPath + "index.html";
+        } else {
+            if (!BUtility.uriHasSchema(configVO.indexUrl)) {
+                indexUrl = widgetPath + configVO.indexUrl;
+            }
+        }
+        String errorPath = null;
+        if ("#".equals(configVO.errorPath)
+                || configVO.errorPath == null
+                || configVO.errorPath.length() == 0) {
+            errorPath = widgetPath + "error.html";
+        } else {
+            if (!BUtility.uriHasSchema(configVO.errorPath)) {
+                errorPath = widgetPath + configVO.errorPath;
+            }
+        }
+        WWidgetData widgetData = new WWidgetData();
+        widgetData.m_appId = configVO.appId;
+        widgetData.m_appkey = configVO.appkey;
+        widgetData.m_appdebug = "true".equals(configVO.debug) ? 1 : 0;
+        widgetData.m_obfuscation = "true".equals(configVO.obfuscation) ? 1 : 0;
+        widgetData.m_widgetName = configVO.widgetName;
+        widgetData.m_indexUrl = indexUrl;
+        widgetData.m_widgetPath = widgetPath;
+        widgetData.m_description = configVO.description;
+        widgetData.mErrorPath = errorPath;
+        widgetData.m_wgtType = wgtType;
+        widgetData.m_indexWindowOptions = configVO.indexWindowOptions;
+        return widgetData;
+    }
+
     public boolean checkAppStatus(Context inActivity, String appId) {
         try {
             String appstatus = ResoureFinder.getInstance().getString(
@@ -1497,7 +1557,12 @@ public class WDataManager {
                                     "src");
                         }else if("statusbar".equals(localName)){
                             WWidgetData.sStatusBarColor= Color.parseColor(parser.getAttributeValue(null,"color"));
-                        } else if ("deviceitem".equals(localName)) {
+                        } else if ("statusfontblack".equals(localName)) {
+                            String text = parser.nextText();
+                            if ("true".equals(text)) {
+                                WWidgetData.sStatusfontBlack = true;
+                            }
+                        }else if ("deviceitem".equals(localName)) {
                             String text = parser.nextText();
                             if (!widgetData.noHardwareList.contains(text)) {
                                 widgetData.noHardwareList.add(text);
